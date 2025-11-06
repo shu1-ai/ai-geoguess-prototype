@@ -11,6 +11,49 @@ import pandas as pd
 from pathlib import Path
 import random
 import base64
+import os, json, tempfile
+from google.cloud import storage
+
+#===============================
+# クラウド設定
+#===============================
+
+# 環境変数に埋め込まれたJSONキーを一時ファイルに出力して認証
+cred_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+if cred_json:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
+        tmp.write(cred_json.encode("utf-8"))
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
+
+def download_from_gcs(bucket_name, source_blob_name, destination_file_name):
+    """GCSの指定ファイルをローカルにダウンロード"""
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+    blob.download_to_filename(destination_file_name)
+    print(f"✅ {source_blob_name} downloaded to {destination_file_name}")
+
+def load_json_from_gcs(bucket_name, source_blob_name):
+    """GCS上のJSONを直接ロード（ファイル保存せずに）"""
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+    data = blob.download_as_text()
+    print(f"✅ {source_blob_name} loaded as JSON")
+    return json.loads(data)
+
+# ===== 実行部分 =====
+BUCKET_NAME = "geogu_data"
+
+# モデル・CSVをローカルへ
+download_from_gcs(BUCKET_NAME, "country_clipvit_finetune.pth", "country_clipvit_finetune.pth")
+download_from_gcs(BUCKET_NAME, "train_subset.csv", "train_subset.csv")
+download_from_gcs(BUCKET_NAME, "test.csv", "test.csv")
+
+# country_map.jsonをロード（保存しない）
+country_map = load_json_from_gcs(BUCKET_NAME, "country_map.json")
+
+print("🌍 country_mapの一部:", list(country_map.items())[:5])  # デバッグ出力
 
 #===============================
 # データベース
@@ -52,14 +95,11 @@ def save_battle_record(user_choice, answer_code, result):
 # ==============================
 # クラス定義
 # ==============================
-csv_path = r"C:\Users\nshui\osv5m\labels\train_subset.csv"
-df = pd.read_csv(csv_path)
+df = pd.read_csv("train_subset.csv")
 classes = sorted(df["country"].dropna().unique().tolist())
 num_classes = len(classes)
 
-country_map_path = r"C:\Users\nshui\Documents\geoguess_proto\data\country_map.json"
-with open(country_map_path, "r", encoding="utf-8") as f:
-    COUNTRY_MAP = json.load(f)
+COUNTRY_MAP = country_map  # GCSからロード済みの辞書を直接使う
 
 # ==============================
 # モデルロード
@@ -67,10 +107,7 @@ with open(country_map_path, "r", encoding="utf-8") as f:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_name = "vit_base_patch16_clip_224"
 model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
-model.load_state_dict(torch.load(
-    r"C:\Users\nshui\Documents\geoguess_proto\models\country_clipvit_finetune.pth",
-    map_location=device
-))
+model.load_state_dict(torch.load("country_clipvit_finetune.pth", map_location=device))
 model.to(device)
 model.eval()
 
@@ -187,39 +224,44 @@ async def predict_rollout_topk(file: UploadFile = File(...), topk: int = 3):
     }
 
 # ==============================
-# ランダム画像取得
+# ランダム画像取得（GCS対応版）
 # ==============================
-# --- グローバルに定義 ---
-TEST_IMG_DIR = Path(r"C:\Users\nshui\osv5m\test\01")
-df_test = pd.read_csv(r"C:\Users\nshui\osv5m\test\test.csv")
+df_test = pd.read_csv("test.csv")
 
 @app.get("/get_random_image")
 async def get_random_image():
-    global df_test  # グローバル変数を使う宣言
-    # 存在する画像だけを抽出
-    df_test_copy = df_test.copy()
-    df_test_copy["img_path"] = df_test_copy["id"].apply(lambda x: TEST_IMG_DIR / f"{x}.jpg")
-    df_available = df_test_copy[df_test_copy["img_path"].apply(lambda p: p.exists())]
+    """GCS上の01フォルダからランダムな画像を取得"""
+    global df_test
 
-    if df_available.empty:
-        return {"error": "画像が存在するサンプルがありません"}
-
-    sample = df_available.sample(1).iloc[0]
-    img_path = sample["img_path"]
-
-    # 画像をBase64に変換
-    with open(img_path, "rb") as f:
-        img_bytes = f.read()
-    img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-
+    # ランダムサンプル選択
+    sample = df_test.sample(1).iloc[0]
+    img_id = sample["id"]
     country_code = sample["country"]
     country_name = COUNTRY_MAP.get(country_code, country_code)
 
-    return {
-        "image": img_b64,
-        "country_code": country_code,
-        "country_name": country_name
-    }
+    # GCS上のファイルパス
+    gcs_path = f"01/{img_id}.jpg"
+
+    try:
+        # GCSから画像を直接読み込み
+        client = storage.Client()
+        bucket = client.bucket(BUCKET_NAME)
+        blob = bucket.blob(gcs_path)
+
+        if not blob.exists():
+            return {"error": f"Image not found in GCS: {gcs_path}"}
+
+        img_bytes = blob.download_as_bytes()
+        img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+        return {
+            "image": img_b64,
+            "country_code": country_code,
+            "country_name": country_name
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 # ==============================
 # 対戦モード：ユーザー vs AI
 # ==============================
