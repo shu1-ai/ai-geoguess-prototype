@@ -9,7 +9,7 @@ from io import BytesIO
 # サーバーの場所
 # ==============================
 
-API_BASE = "https://ai-geoguess-api.onrender.com"
+API_BASE = "https://ai-geoguess-prototype.onrender.com/"
 
 # ==============================
 # クラス一覧の読み込み
