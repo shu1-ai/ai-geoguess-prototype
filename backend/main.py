@@ -233,26 +233,27 @@ async def get_random_image():
     """GCS上の01フォルダからランダムな画像を取得"""
     global df_test
 
-    # ランダムサンプル選択
     sample = df_test.sample(1).iloc[0]
     img_id = sample["id"]
     country_code = sample["country"]
     country_name = COUNTRY_MAP.get(country_code, country_code)
-
-    # GCS上のファイルパス
     gcs_path = f"01/{img_id}.jpg"
 
+    print(f"🎯 Trying to fetch from GCS: {gcs_path}")
+
     try:
-        # GCSから画像を直接読み込み
         client = storage.Client()
         bucket = client.bucket(BUCKET_NAME)
         blob = bucket.blob(gcs_path)
 
         if not blob.exists():
+            print(f"⚠️ Blob not found: {gcs_path}")
             return {"error": f"Image not found in GCS: {gcs_path}"}
 
         img_bytes = blob.download_as_bytes()
         img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+        print(f"✅ Successfully fetched image: {gcs_path}")
 
         return {
             "image": img_b64,
@@ -261,6 +262,7 @@ async def get_random_image():
         }
 
     except Exception as e:
+        print(f"💥 Exception while fetching image: {e}")
         return {"error": str(e)}
 # ==============================
 # 対戦モード：ユーザー vs AI
