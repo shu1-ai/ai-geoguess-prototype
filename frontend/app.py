@@ -6,6 +6,12 @@ import base64
 from io import BytesIO
 
 # ==============================
+# サーバーの場所
+# ==============================
+
+API_BASE = "https://ai-geoguess-api.onrender.com"
+
+# ==============================
 # クラス一覧の読み込み
 # ==============================
 import os
@@ -54,7 +60,7 @@ if mode == "画像アップロードで推論":
             files = {"file": (uploaded_file.name, uploaded_file.read(), uploaded_file.type)}
 
             try:
-                res = requests.post("http://127.0.0.1:8000/predict_rollout_topk?topk=3", files=files)
+                res = requests.post(f"{API_BASE}/predict_rollout_topk?topk=3", files=files)
                 res.raise_for_status()
                 data = res.json()
 
@@ -83,7 +89,7 @@ elif mode == "AIと予測対戦":
 
     if st.button("景色を探す"):
         try:
-            res = requests.get("http://127.0.0.1:8000/get_random_image")
+            res = requests.get(f"{API_BASE}/get_random_image")
             res.raise_for_status()
             data = res.json()
             st.session_state["image_b64"] = data["image"]
@@ -110,7 +116,7 @@ elif mode == "AIと予測対戦":
 
             # --- try ブロックをボタン内で整理 ---
             try:
-                res = requests.post("http://127.0.0.1:8000/battle", json=payload)
+                res = requests.post(f"{API_BASE}/battle", json=payload)
                 res.raise_for_status()
                 data = res.json()
 
@@ -145,7 +151,7 @@ elif mode == "戦績表示":
     st.header("📊 戦績表示")
 
     try:
-        res = requests.get("http://127.0.0.1:8000/get_battle_records")
+        res = requests.get(f"{API_BASE}/get_battle_records")
         res.raise_for_status()
         records = res.json()  # 例: [{"timestamp":..., "user_choice":..., "answer_code":..., "result":...}, ...]
 
