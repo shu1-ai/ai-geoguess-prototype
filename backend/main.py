@@ -350,3 +350,17 @@ async def get_classes():
     """全ての国コード・国名を返す（フロント選択肢用）"""
     items = [{"code": c, "name": COUNTRY_MAP.get(c, c)} for c in classes]
     return {"classes": items}
+
+# ==============================
+# 動作確認用ルート
+# ==============================
+@app.get("/")
+def root():
+    return {"message": "FastAPI backend is running on Render 🚀"}
+
+# ==============================
+# Render上での起動
+# ==============================
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
