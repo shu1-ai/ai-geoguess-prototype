@@ -224,32 +224,40 @@ async def predict_rollout_topk(file: UploadFile = File(...), topk: int = 3):
     }
 
 # ==============================
-# ランダム画像取得（GCS対応版）
+# GCS対応：ランダム画像取得
 # ==============================
+
 df_test = pd.read_csv("test.csv")
 
 @app.get("/get_random_image")
 async def get_random_image():
-    """GCS上の01フォルダからランダムな画像を取得"""
-    global df_test
-
-    sample = df_test.sample(1).iloc[0]
-    img_id = sample["id"]
-    country_code = sample["country"]
-    country_name = COUNTRY_MAP.get(country_code, country_code)
-    gcs_path = f"01/{img_id}.jpg"
-
-    print(f"🎯 Trying to fetch from GCS: {gcs_path}")
-
+    """GCS上で存在する画像のみからランダム選択"""
     try:
         client = storage.Client()
         bucket = client.bucket(BUCKET_NAME)
+
+        # GCSの 01/ フォルダ内のファイル一覧を取得
+        blobs = list(bucket.list_blobs(prefix="01/"))
+        existing_ids = {b.name.split("/")[-1].replace(".jpg", "") for b in blobs if b.name.endswith(".jpg")}
+        print(f"🧩 GCS上の画像数: {len(existing_ids)} 枚")
+
+        # test.csv 内のIDで、実際にGCS上に存在するものだけ残す
+        df_available = df_test[df_test["id"].astype(str).isin(existing_ids)]
+        if df_available.empty:
+            print("⚠️ GCS上に存在する画像が見つかりません")
+            return {"error": "GCS上に存在する画像が見つかりません"}
+
+        # ランダムサンプルを選択
+        sample = df_available.sample(1).iloc[0]
+        img_id = sample["id"]
+        country_code = sample["country"]
+        country_name = COUNTRY_MAP.get(country_code, country_code)
+        gcs_path = f"01/{img_id}.jpg"
+
+        print(f"🎯 Trying to fetch from GCS: {gcs_path}")
+
+        # 画像をダウンロードしてbase64変換
         blob = bucket.blob(gcs_path)
-
-        if not blob.exists():
-            print(f"⚠️ Blob not found: {gcs_path}")
-            return {"error": f"Image not found in GCS: {gcs_path}"}
-
         img_bytes = blob.download_as_bytes()
         img_b64 = base64.b64encode(img_bytes).decode("utf-8")
 
