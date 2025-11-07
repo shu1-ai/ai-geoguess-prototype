@@ -48,7 +48,7 @@ BUCKET_NAME = "geogu_data"
 # モデル・CSVをローカルへ
 download_from_gcs(BUCKET_NAME, "country_clipvit_finetune.pth", "country_clipvit_finetune.pth")
 download_from_gcs(BUCKET_NAME, "train_subset.csv", "train_subset.csv")
-download_from_gcs(BUCKET_NAME, "test.csv", "test.csv")
+download_from_gcs(BUCKET_NAME, "test_subset.csv", "test_subset.csv")
 
 # country_map.jsonをロード（保存しない）
 country_map = load_json_from_gcs(BUCKET_NAME, "country_map.json")
@@ -227,7 +227,7 @@ async def predict_rollout_topk(file: UploadFile = File(...), topk: int = 3):
 # GCS対応：ランダム画像取得
 # ==============================
 
-df_test = pd.read_csv("test.csv")
+df_test = pd.read_csv("test_subset.csv")
 
 @app.get("/get_random_image")
 async def get_random_image():
