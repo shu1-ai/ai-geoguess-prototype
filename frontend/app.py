@@ -8,7 +8,12 @@ from io import BytesIO
 # ==============================
 # クラス一覧の読み込み
 # ==============================
-with open("country_map.json", "r", encoding="utf-8") as f:
+import os
+
+base_dir = os.path.dirname(__file__)
+json_path = os.path.join(base_dir, "country_map.json")
+
+with open(json_path, "r", encoding="utf-8") as f:
     COUNTRY_MAP = json.load(f)
 
 classes = list(COUNTRY_MAP.values())
