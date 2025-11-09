@@ -47,16 +47,16 @@ mode = st.sidebar.radio(
 # ホーム画面
 # --------------------------------------------------
 if mode == "🏠 ホーム":
-    st.title("🌍 GeoGuessAIのサイトへようこそ！")
+    st.title("GeoGuessAIのサイトへようこそ！")
     st.markdown("""
     ### 🎯 このサイトについて
     ある景色が **どの国で撮影されたのかをAIが予測** します。  
-    ViT（Vision Transformer）と呼ばれるAIモデルベースに学習した独自モデルを使用しています。
+    ViT（Vision Transformer）と呼ばれる、AIモデルをベースに学習したモデルを使用しています。
 
     ### 🧩 モード紹介
     - **📷 画像アップロードで推論**  
       あなたがアップロードしたストリートビューのファイルに対して、AIが撮影国を予測します。  
-      各ブロックごとのAIがどこを見ているかの情報（アテンションマップ、累積アテンション）を可視化します。
+      各ブロックごとのAIがどこを見ているかの情報（平均アテンションマップ、累積アテンション）を可視化します。
 
     - **⚔️ AIと予測対戦**  
       ランダムに表示される景色を見て、あなたが国を予想します。  
@@ -74,9 +74,9 @@ if mode == "🏠 ホーム":
 # 画像アップロードで推論モード
 # --------------------------------------------------
 elif mode == "📷 画像アップロードで推論":
-    st.header("📷 ViTによる推論")
+    st.header("📷 AIによる国予測")
 
-    uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("下のBrowse Filesから画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert("RGB")
@@ -134,7 +134,7 @@ elif mode == "⚔️ AIと予測対戦":
 
         user_choice = st.selectbox("あなたの予想する国を選んでください", options=classes_sorted)
 
-        if st.button("対戦開始！"):
+        if st.button("AIとの予測対戦開始！"):
             payload = {
                 "image_b64": st.session_state["image_b64"],
                 "user_choice": user_choice,
