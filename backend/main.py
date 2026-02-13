@@ -61,6 +61,15 @@ print("🌍 country_mapの一部:", list(country_map.items())[:5])  # デバッ�
 import sqlite3
 from datetime import datetime
 DB_PATH = "battle_results.db"
+S3_BUCKET = "my-battle-app-data"
+
+# S3クライアント（環境変数から取得）
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name=os.getenv("AWS_REGION")
+)
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -80,6 +89,21 @@ def init_db():
 # 起動時にDB初期化
 init_db()
 
+#戦績S3送付の定義
+def upload_single_record_to_s3(record_dict):
+    df = pd.DataFrame([record_dict])
+    csv_buffer = io.StringIO()
+    df.to_csv(csv_buffer, index=False)
+
+    filename = f"battle_results/battle_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.csv"
+
+    s3.put_object(
+        Bucket=S3_BUCKET,
+        Key=filename,
+        Body=csv_buffer.getvalue()
+    )
+
+
 # 戦績登録用関数
 def save_battle_record(user_choice, answer_code, result):
     import datetime
@@ -91,6 +115,14 @@ def save_battle_record(user_choice, answer_code, result):
     )
     conn.commit()
     conn.close()
+
+    # S3に1レコードだけ追加保存
+    upload_single_record_to_s3({
+        "timestamp": timestamp,
+        "user_choice": user_choice,
+        "answer_code": answer_code,
+        "result": result
+    })
 
 # ==============================
 # クラス定義
