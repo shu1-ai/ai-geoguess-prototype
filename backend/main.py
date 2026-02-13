@@ -114,7 +114,7 @@ def save_battle_record(user_choice, answer_code, result):
     c = conn.cursor()
     c.execute(
         "INSERT INTO battles (timestamp, user_choice, answer_code, result) VALUES (?, ?, ?, ?)",
-        (datetime.datetime.now().isoformat(), user_choice, answer_code, result)
+        (timestamp, user_choice, answer_code, result)
     )
     conn.commit()
     conn.close()
