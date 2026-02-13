@@ -106,7 +106,7 @@ def upload_single_record_to_s3(record_dict):
 
 
 # 戦績登録用関数
-import datetime
+from datetime import datetime
 def save_battle_record(user_choice, answer_code, result):
     
     timestamp = datetime.now().isoformat()
