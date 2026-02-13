@@ -59,6 +59,7 @@ print("🌍 country_mapの一部:", list(country_map.items())[:5])  # デバッ�
 # データベース
 #===============================
 import sqlite3
+import boto3
 from datetime import datetime
 DB_PATH = "battle_results.db"
 S3_BUCKET = "my-battle-app-data"
