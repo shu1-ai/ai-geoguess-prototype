@@ -106,8 +106,10 @@ def upload_single_record_to_s3(record_dict):
 
 
 # 戦績登録用関数
+import datetime
 def save_battle_record(user_choice, answer_code, result):
-    import datetime
+    
+    timestamp = datetime.now().isoformat()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute(
