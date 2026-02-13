@@ -334,13 +334,13 @@ async def battle(payload: dict):
         ai_top1_code = ai_codes[0]  # AIの1位予測コード
 
         if user_code == answer_code and user_code != ai_top1_code:
-            result = "あなたの勝ち！🎉"
+            result = "あなたの勝ち！"
         elif user_code != answer_code and answer_code == ai_top1_code:
-            result = "AIの勝ち！🤖"
+            result = "AIの勝ち！"
         elif user_code == answer_code and answer_code == ai_top1_code:
-            result = "引き分け！🤝"
+            result = "引き分け！"
         else:
-            result = "どちらも不正解😅"
+            result = "どちらも不正解"
         
         # 勝敗判定後
         save_battle_record(user_choice_name, answer_code, result)
